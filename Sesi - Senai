@@ -1,0 +1,1855 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Sistema de Fluxos de Vendas - SESI SENAI</title>
+    <style>
+        * { margin: 0; padding: 0; box-sizing: border-box; }
+        body { font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); min-height: 100vh; display: flex; }
+        .sidebar { width: 300px; background: white; box-shadow: 2px 0 10px rgba(0,0,0,0.1); overflow-y: auto; position: fixed; height: 100vh; left: 0; top: 0; z-index: 100; }
+        .sidebar-header { padding: 25px 20px; background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; }
+        .sidebar-header h1 { font-size: 1.3rem; margin-bottom: 5px; }
+        .sidebar-header p { font-size: 0.85rem; opacity: 0.9; }
+        .sidebar-section { padding: 15px 0; border-bottom: 1px solid #e2e8f0; }
+        .sidebar-section-title { padding: 0 20px 10px 20px; font-size: 0.75rem; font-weight: 700; text-transform: uppercase; color: #718096; }
+        .sidebar-item { padding: 12px 20px; cursor: pointer; transition: all 0.2s; border-left: 3px solid transparent; display: flex; align-items: center; gap: 10px; }
+        .sidebar-item:hover { background: #f7fafc; border-left-color: #667eea; }
+        .sidebar-item.active { background: #edf2f7; border-left-color: #667eea; font-weight: 600; }
+        .team-badge { padding: 2px 8px; border-radius: 12px; font-size: 0.7rem; font-weight: 600; color: white; }
+        .badge-saude { background: #10b981; }
+        .badge-pj { background: #3b82f6; }
+        .badge-sesi { background: #f59e0b; }
+        .badge-senai { background: #ef4444; }
+        .badge-geral { background: #8b5cf6; }
+        .main-content { margin-left: 300px; flex: 1; padding: 30px; overflow-y: auto; height: 100vh; }
+        .flow-content { display: none; }
+        .flow-content.active { display: block; }
+        .header { background: white; border-radius: 15px; padding: 30px; box-shadow: 0 10px 30px rgba(0,0,0,0.2); margin-bottom: 30px; }
+        .header h1 { color: #2d3748; font-size: 2rem; margin-bottom: 10px; }
+        .header p { color: #718096; font-size: 1rem; }
+        .phase { margin-bottom: 20px; border-radius: 10px; overflow: hidden; box-shadow: 0 5px 15px rgba(0,0,0,0.1); }
+        .phase-header { padding: 20px; cursor: pointer; display: flex; justify-content: space-between; align-items: center; color: white; font-weight: 600; transition: opacity 0.2s; }
+        .phase-header:hover { opacity: 0.9; }
+        .phase-default { background: linear-gradient(135deg, #64748b 0%, #475569 100%); }
+        .phase-body { background: white; padding: 0; max-height: 0; overflow: hidden; transition: max-height 0.3s ease, padding 0.3s ease; }
+        .phase.expanded .phase-body { max-height: 10000px; padding: 20px; }
+        .lane { margin-bottom: 25px; }
+        .lane-header { background: #f7fafc; padding: 12px 15px; border-left: 4px solid #cbd5e0; font-weight: 600; color: #2d3748; border-radius: 5px 5px 0 0; }
+        .lane-steps { background: white; padding: 15px; border: 2px solid #e2e8f0; border-top: none; border-radius: 0 0 5px 5px; }
+        .step { background: #f7fafc; border: 2px solid #e2e8f0; border-radius: 8px; padding: 15px; margin-bottom: 10px; cursor: pointer; transition: all 0.2s; }
+        .step:hover { border-color: #667eea; box-shadow: 0 2px 8px rgba(102, 126, 234, 0.2); }
+        .step-header { display: flex; align-items: flex-start; gap: 12px; }
+        .step-number { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; min-width: 32px; height: 32px; border-radius: 50%; display: flex; align-items: center; justify-content: center; font-weight: 700; flex-shrink: 0; font-size: 0.9rem; }
+        .step-text { flex: 1; color: #2d3748; line-height: 1.6; }
+        .step-output { margin-top: 15px; padding: 12px; background: #edf2f7; border-left: 4px solid #4299e1; border-radius: 5px; display: none; }
+        .step.expanded .step-output { display: block; }
+        .step-output-label { font-weight: 600; color: #2c5282; font-size: 0.85rem; margin-bottom: 5px; }
+        .alert-critical { margin-top: 12px; padding: 12px; background: #fee; border: 2px solid #f00; border-radius: 5px; color: #c00; font-weight: 600; }
+        .alert-warning { margin-top: 12px; padding: 12px; background: #fffbeb; border: 1px solid #fcd34d; border-radius: 5px; color: #92400e; }
+        .handoff { text-align: center; padding: 15px; margin: 20px 0; }
+        .handoff-badge { display: inline-block; background: linear-gradient(135deg, #fbbf24 0%, #f59e0b 100%); color: white; padding: 10px 20px; border-radius: 20px; font-weight: 600; font-size: 0.9rem; }
+        .arrow-down { text-align: center; color: #cbd5e0; font-size: 2rem; margin: 8px 0; }
+        .chevron { transition: transform 0.3s; font-size: 1.2rem; }
+        .phase.expanded .chevron { transform: rotate(90deg); }
+        @media (max-width: 768px) {
+            .sidebar { width: 100%; position: relative; height: auto; }
+            .main-content { margin-left: 0; }
+            .header h1 { font-size: 1.5rem; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sidebar">
+        <div class="sidebar-header">
+            <h1>🎯 Fluxos de Vendas</h1>
+            <p>SESI SENAI - Sistema Integrado</p>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">🏥 SAÚDE</div>
+            <div class="sidebar-item active" onclick="showFlow('nr-rpc')">
+                <span class="team-badge badge-saude">SAÚDE</span>
+                <span>NR-Saúde RPC</span>
+            </div>
+            <div class="sidebar-item" onclick="showFlow('nr-pac')">
+                <span class="team-badge badge-saude">SAÚDE</span>
+                <span>NR-Saúde PAC</span>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">🏢 PESSOA JURÍDICA</div>
+            <div class="sidebar-item" onclick="showFlow('pj-sst')">
+                <span class="team-badge badge-pj">PJ</span>
+                <span>PJ SST</span>
+            </div>
+            <div class="sidebar-item" onclick="showFlow('renovacoes-sst')">
+                <span class="team-badge badge-pj">PJ</span>
+                <span>Renovações SST</span>
+            </div>
+            <div class="sidebar-item" onclick="showFlow('pj-promocao')">
+                <span class="team-badge badge-pj">PJ</span>
+                <span>PJ Promoção Assistencial</span>
+            </div>
+            <div class="sidebar-item" onclick="showFlow('renovacoes-promocao')">
+                <span class="team-badge badge-pj">PJ</span>
+                <span>Renovações Promoção</span>
+            </div>
+            <div class="sidebar-item" onclick="showFlow('pj-educacao')">
+                <span class="team-badge badge-pj">PJ</span>
+                <span>PJ Educação</span>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">🎓 SESI</div>
+            <div class="sidebar-item" onclick="showFlow('sesi-transferencia')">
+                <span class="team-badge badge-sesi">SESI</span>
+                <span>Escola SESI - Transferência</span>
+            </div>
+            <div class="sidebar-item" onclick="showFlow('sesi-campanha')">
+                <span class="team-badge badge-sesi">SESI</span>
+                <span>Escola SESI - Campanha</span>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">🔧 SENAI</div>
+            <div class="sidebar-item" onclick="showFlow('pf-senai')">
+                <span class="team-badge badge-senai">SENAI</span>
+                <span>PF SENAI</span>
+            </div>
+        </div>
+        <div class="sidebar-section">
+            <div class="sidebar-section-title">📞 GERAL</div>
+            <div class="sidebar-item" onclick="showFlow('pos-vendas')">
+                <span class="team-badge badge-geral">GERAL</span>
+                <span>Pós-Vendas</span>
+            </div>
+        </div>
+    </div>
+
+    <div class="main-content">
+        <!-- FLUXO 1: NR-Saúde RPC -->
+        <div id="flow-nr-rpc" class="flow-content active">
+            <div class="header">
+                <h1>Fluxo NR-Saúde - RPC</h1>
+                <p>Processo de cursos NR com Responsável Pessoa Física no Cliente (RPC)</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Levantamento e Proposta</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-3</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Levantamento de proposta pelo PJ ou supervisor da saúde, no contato com o cliente identifica-se a necessidade e verifica com supervisor da saúde o curso correto (carga horária, tipo de curso, etc.) e se precisa pedir liberação de novo curso para a Sede. Caso não exista produto liberado, o supervisor solicita à Sede. Após liberado, comunica o PJ para abrir a proposta no CRM.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">PJ abre a oportunidade no CRM, alimenta a planilha de acompanhamento dos Cursos NR, com as seguintes informações: nº de proposta no CRM, nome da empresa, CNPJ, produto, carga horária e local de realização e repassa para a assistente administrativo (Andresa) por meio de comentário na planilha para que ela registre a proposta no CRM e informe via e-mail a forma de pagamento.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">O agente PJ consulta o supervisor da saúde, que consulta o PCP por email sobre data, horário e ambiente para execução. PJ valida com cliente proposta de execução. Se confirmada compra, verifica a necessidade de ordem de compra e, caso se trate de curso de reciclagem, questiona ao cliente se o 1º curso foi executado pelo SESI ou SENAI e em que data, para que outro fornecedor. PJ precisa solicitar os certificados do curso anterior dos alunos inscritos. Deve-se reforçar com o cliente que é responsabilidade dele enviar estes certificados e que devem ser enviadas cópias frente e verso.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Planejamento e Abertura</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 4-11</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">A partir deste momento as comunicações realizam-se exclusivamente na planilha "Cursos de NR", por meio de comentários mencionando o responsável pela próxima ação.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">PJ negocia a proposta e sendo fechada, ganha no CRM. Inclui na planilha "Cursos de NR" com as seguintes informações: se haverá ou não ordem de compra, e-mail para faturamento, e-mail para certificados. E marca o supervisor da saúde e o PCP nos comentários da planilha de acompanhamento.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Supervisor coleta com cliente a planilha com dados cadastrais dos participantes do curso e, se for RECICLAGEM, valida os certificados (cópia frente e verso). O supervisor cria uma pasta no Drive, inserindo os dados coletados, o nome da pasta deve ter o número da proposta e o nome da empresa.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Supervisor da saúde acessa a planilha "cursos de NR" e incluirá as seguintes informações: Doc. alunos validados (sim ou não), data de realização, horário, quantidade mínima e máxima de alunos e docente. Em seguida, realiza um comentário mencionando a assistente de mercado (Andresa) que irá dar sequência no processo.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">A assistente de mercado (Andresa) abre o RPC, confirma o processo seletivo, inclui os respectivos números na planilha "Cursos de NR" e realiza um comentário mencionando a secretaria para atualizar a turma.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">A secretaria atualiza a turma e cria o contrato, em seguida inclui o nº da turma e informação sobre a confirmação de matrículas na planilha "Cursos NR", em seguida realiza um comentário mencionando PCP Saúde (Fabiana) que irá dar sequência ao ensalamento.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Caso haja necessidade de prorrogação, o supervisor da saúde alinha com o PCP da saúde e com o cliente as alterações, fazendo as atualizações na planilha, marcando o analista de processos da Saúde (Lucas) para atualizar o PS e o modelo de contrato no RPC. O analista de processos da Saúde marca o PCP que deve ajustar o ensalamento e as datas na turma.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">O PCP da saúde (Fabiana) acessa a planilha "cursos de NR", e confirma o ensalamento. Em seguida, realiza um comentário mencionando supervisor de saúde, que irá dar sequência no processo.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">Supervisor entrega a lista de presença e material necessário (apostilas etc.) para o docente.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Execução e Finalização</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 13-17</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">O Docente executa o serviço, pega assinatura dos alunos no primeiro dia de aula e encaminha para a secretaria confirmar as matrículas. Simultaneamente ao envio da lista de presença o docente realiza um comentário na planilha "Cursos de NR", mencionando secretaria para dar sequência ao processo.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">O docente confirma o diário e marca o supervisor na planilha. O Supervisor valida o diário e marca a secretaria para seguir com a certificação. O Supervisor assinala que "sim" para liberar para faturamento e marca a assistente da Saúde (Gabriela).</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">15</div>
+                                    <div class="step-text">A assistente da saúde (Gabriela) abre o chamado de faturamento PJ. Em seguida, realiza um comentário na planilha "Cursos de NR" mencionando a analista de mercado (Larissa), que atualiza as projeções.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">A secretaria emite os certificados e encaminha para o cliente, mantendo o PJ responsável em cópia.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">17</div>
+                                    <div class="step-text">Pós-venda</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 2: NR-Saúde PAC -->
+        <div id="flow-nr-pac" class="flow-content">
+            <div class="header">
+                <h1>Fluxo NR-Saúde - PAC</h1>
+                <p>Processo de cursos NR com Processo de Abertura de Curso (PAC)</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Planejamento Inicial</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-7</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Definição do curso pelo supervisor da saúde, PCP e Mercado.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">A partir deste momento as comunicações realizam-se exclusivamente na planilha "Cursos de NR", por meio de comentários mencionando o responsável pela próxima ação.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">Supervisor da saúde acessa a planilha "cursos de NR", e incluirá as seguintes informações: produto, código do produto, CH, valor, parcelamento, data de realização, horário, quantidade mínima e máxima de alunos e docente. Em seguida, realiza um comentário mencionando a assistente de mercado (Andresa) que irá dar sequência no processo.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Assistente administrativa do mercado (Andresa) abre PAC no SGN, com data inicial e final do curso, definição de parcelamento e quantidade de alunos. Confirma o Processo Seletivo, alimenta a planilha e marca a secretaria.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">A secretaria atualiza a turma e cria o contrato, em seguida inclui o nº da turma na planilha "Cursos NR", secretaria marca o PCP Saúde na planilha.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">PCP da saúde (Fabiana) realiza o ensalamento, em seguida realiza um comentário mencionando a assistente administrativa do mercado (Tainá), para atualização no drive da planilha de cursos em oferta e atualiza o template. Encaminha o template por e-mail para o time PF iniciar a venda.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Assistente administrativa do mercado (Tainá) acompanha diariamente inscrições, atualiza a planilha "Versão 2".</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Captação e Vendas</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 8-11</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">Caso haja venda para cliente PJ, o time PF coleta autorização de faturamento assinada e carimbada pelo cliente e inclui o cliente na pré-matrícula no SGN.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">Agente PF inscreve o cliente no SGN, checando a inadimplência. Inclui o cliente no PS, habilita o contrato. Agente PF adiciona os documentos pessoais do inscrito na Pré-Matrícula. Havendo AF inclui na pré-matrícula também.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Agente PF ganha a oportunidade no CRM.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Agente PF gera o contrato e, ou colhe assinatura presencial, ou encaminha para assinatura eletrônica. Sendo Reciclagem, utilizar a orientação abaixo. Não sendo, pula.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">⚠️ VALIDAÇÃO CRÍTICA - RECICLAGEM</div><div style="font-size: 0.9rem; opacity: 0.9;">Passo 12</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">Sendo RECICLAGEM, time PF questiona ao cliente se o 1º curso foi executado pelo SESI ou SENAI e em que data. Sendo recente, aciona a secretaria por e-mail para realizar a consulta do certificado do curso de formação no SGN. Secretaria encaminha certificado de formação ao time PF para incluir no processo atual. Não sendo recente, a secretaria checa livro de protocolo de entrega de certificados e comunica o time PF de que se o certificado é de que é buscar arquivo morto. Sendo curso de formação realizado por outro fornecedor, o PF precisará solicitar os certificados do curso anterior e incluir no SGN. Deve-se reforçar com o cliente que é responsabilidade dele enviar estes certificados e que devem ser enviadas cópias frente e verso.</div>
+                                </div>
+                                <div class="alert-critical">⚠️ VALIDAR ESTA ETAPA - OBRIGATÓRIO PARA RECICLAGEM</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Confirmação e Processamento</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 13-17</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">Supervisor faz acompanhamento das inscrições e com 48h de antecedência ao início das turmas, deve confirmar, postergar ou cancelar, consultando o PCP em caso de prorrogação. Deve preencher a coluna Prorrogação na planilha de NRs e marcar a assistente de mercado (?). Caso haja prorrogação, supervisor da saúde e o Analista de processos da Saúde (Lucas) para atualizar o PS e modelo de contrato no SGN. Após atualização do PS, marca o PCP (Fabi) para atualizar ensalamento e datas na turma.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">Assistente de mercado Tainá Sandri atualiza a Versão 2, informando a confirmação ou atualizando com as novas datas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">15</div>
+                                    <div class="step-text">O curso sendo adiado ou cancelado, time PF contata os clientes.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">O curso sendo confirmado, o time PF comunica os estudantes. Encaminha os contratos que não foram assinados eletronicamente para a assistente de mercado (Andresa), que imprime os contratos e no primeiro dia de aula, colhe assinaturas necessárias.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">17</div>
+                                    <div class="step-text">Após coletadas as assinaturas dos contratos, assistente de mercado (Andresa) entrega os contratos assinados para a secretaria.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Execução e Certificação</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 18-24</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">18</div>
+                                    <div class="step-text">Supervisor entrega a lista de presença e material necessário (apostilas etc.) para o docente.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">19</div>
+                                    <div class="step-text">O Docente executa o serviço, pega assinatura dos alunos na lista de presença no primeiro dia de aula e entrega para a secretaria confirmar as matrículas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">20</div>
+                                    <div class="step-text">O docente confirma o diário e marca o supervisor na planilha. O Supervisor valida o diário e marca a secretaria para seguir com a certificação.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">21</div>
+                                    <div class="step-text">Caso haja responsável financeiro PJ, o Supervisor assinala que "sim" para liberar para faturamento na planilha e marca a assistente da Saúde (Gabriela).</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">22</div>
+                                    <div class="step-text">A assistente da saúde (Gabriela) abre o chamado de faturamento PJ. Em seguida, realiza um comentário na planilha "Cursos de NR" mencionando a analista de mercado (Larissa), que atualiza as projeções.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">23</div>
+                                    <div class="step-text">A secretaria emite os certificados a todos os clientes e junta boletos em caso de clientes PF.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">24</div>
+                                    <div class="step-text">Pós-venda.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 3: PJ SST -->
+        <div id="flow-pj-sst" class="flow-content">
+            <div class="header">
+                <h1>Fluxo PJ SST</h1>
+                <p>Processo de vendas para Pessoa Jurídica - Serviços de Saúde e Segurança do Trabalho</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Prospecção e Proposta</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-8</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Levantamento da proposta</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Cadastrar no CRM</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">PJ encaminha por e-mail para Assistente Administrativo (Andresa) com cópia para Coord (Felipe), supervisor e analista comercial (Larissa)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Desenvolver documento com informações necessárias da empresa (Treinamento dos PJs / Check List)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Levantamento das quantificações ou análise do PGR pelo Engenheiro, que encaminha informações para a assistente fazer a proposta.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Assistente faz a precificação e valida com supervisor em até 24h (NRs - prazo 24h / SST - flexível)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Assistente lança no CRM (com a data do contrato.) e devolve via e-mail para PJ com cópia Coord e Supervisor e analista comercial (Larissa)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">PJ fazer negociação, combinar o prazo, e follow e ganhar no CRM (subir proposta no CRM)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Processamento e Contrato</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 9-14</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO (time PJ)</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">Indústrias, nome e e-mail do contato de compras de empresa e data de vencimento de boleto.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">(Larissa), Analista de Processos da Saúde (Lucas) e o assit adm da saúde (Gabriela)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Analista de mercado alimenta planilha para projeção</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">PJ formaliza por e-mail de agradecimento ao cliente e um portfolio de novos produtos, + orienta o cliente a usar o Portal do Cliente.</div>
+                                </div>
+                                <div class="alert-warning">Jean encaminhar manual para Susan</div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">Ass Adm do mercado (Andresa) alimenta planilha para renovação / analista de processos da saúde (?) inclui na planilha de faturamento</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO / MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">Execução e apresentação dos documentos e sistema S+. No momento da apresentação, se possível, PJ acompanhar para cross selling</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">15</div>
+                                    <div class="step-text">Contratos da Saúde.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">Pós-venda (vide aba específica)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 4: Renovações SST -->
+        <div id="flow-renovacoes-sst" class="flow-content">
+            <div class="header">
+                <h1>Renovações SST</h1>
+                <p>Processo de renovação de contratos de Saúde e Segurança do Trabalho</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Processo de Renovação</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-12</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: ANALISTA DE PROCESSOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Analista de Processos da Saúde (Lucas) alimenta diariamente a Planilha de controle de contratos, que sinaliza em vermelho os contratos que precisam ser renovados (90 dias antes do vencimento)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Engenheira (Larissa) quando notificado pelo SE SUITE/já deixa os documentos e quantificações na pasta Anexos no SE SUITE</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO (ASSISTENTE)</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">Assistente administrativo de mercado (Andresa) encaminha a proposta para supervisor do SST ou cliente para renovação</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Assistente administrativo de mercado (Andresa) consulta a planilha diariamente para identificar contratos que precisam iniciar o processo de renovação. Encaminha para o supervisor (Carol), analista de processos da saúde (Larissa), abre a proposta de renovação. Consulta a pasta de documentos e quantificações na SE SUITE alimentada pela engenheira (Larissa), abre a proposta de renovação no CRM e Marca a Assistente de Mercado (Andresa) na planilha Emissão de Contratos.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Assistente administrativo de mercado (Andresa) encaminha a proposta para supervisor da Promoção (Carol) para visitar/contatar o cliente para renovação.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Supervisor da Promoção (Carol), em caso de visita, envolve o agente PJ da conta para visita e renovação. Em caso de e-mail, copiar o agente PJ da conta para ciência.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Em caso de renovação, Supervisor da promoção (Carol) formaliza por e-mail para PJ da conta, para ganhar a oportunidade no CRM (subir a proposta assinada), analista de mercado (Larissa), e Analista de Processos da Saúde (Lucas) para alimentar a planilha de contratos, para assistente de mercado (Andresa) e assistente da saúde para faturamento (Gabriela)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">Analista de mercado alimenta planilha para projeção</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">Execução</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Assistente da saúde (Gabriela) executa faturamento mensalmente</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Pós-vendas</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 5: PJ Promoção Assistencial -->
+        <div id="flow-pj-promocao" class="flow-content">
+            <div class="header">
+                <h1>Fluxo PJ Promoção Assistencial</h1>
+                <p>Processo de vendas para Pessoa Jurídica - Promoção Assistencial</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Prospecção e Contratação</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-10</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Levantamento da proposta pelo time PJ ou Supervisor</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Cliente entra em contato solicitando proposta</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Time PJ cadastrar no CRM.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">PJ encaminha por e-mail para Coord e Supervisor (Carol), analista comercial (Larissa), PCP da Saúde (Fabiana)</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Precificação</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Supervisor (eventos) faz a precificação/ proposta (PPA) e encaminha para Assistente mercado (Andresa).</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Assistente mercado (Andresa) lança precificação no CRM com PPA em anexo e encaminha para o PJ fazer negociação</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Registro 01</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">PJ fazer negociação, combinar o prazo, e follow e ganhar no CRM (subir cotação no CRM), em seguida marcar a Assistente de Mercado (Andresa) na planilha Emissão de Contratos para que ela lance a execução e marca também o(a) PJ responsável pelo contrato para que esteja formaliz e-mail.</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Registro 02</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Em caso de poder público, precisamos do empenho e ordem de compra e combinados em relação a envio de NF (pessoa, data e e-mail). Sendo indústrias, nome e e-mail do contato de compras de empresa e data de vencimento de boleto, parcelamento.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">PJ formaliza por e-mail o aceite com o contrato assinado em anexo para coord e supervisor, analista de Processos da Saúde (Lucas) e o assit adm de mercado, PCP (Fabiana)</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Poder Público</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">PJ formaliza por e-mail de agradecimento ao cliente e um portfolio de novos produtos, + orienta o cliente a usar o Portal do Cliente.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Analista de mercado alimenta planilha para projeção / Analista de Processos da Saúde (Lucas) inclui na planilha de controle de contratos da Saúde e lança a execução no respectivo RPC, em seguida marca a Assistente da saúde (Gabriela), na planilha Emissão de Contratos para executar o faturamento.</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Projeção</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Execução.</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Execução</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">Supervisor (Carol) aciona assistente da saúde (Gabriela) para executar faturamento.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">Assistente da saúde (Gabriela) executa o faturamento</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Faturamento</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">Pós-venda (vide aba específica)</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">OBSERVAÇÃO:</div>
+                                    <div>Pós-venda</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 6: Renovações da Promoção -->
+        <div id="flow-renovacoes-promocao" class="flow-content">
+            <div class="header">
+                <h1>Renovações da Promoção</h1>
+                <p>Processo de renovação de contratos de Promoção Assistencial</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Processo Completo</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-11</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: ANALISTA DE PROCESSO DA SAÚDE</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Analista de processos da saúde (Lucas) alimenta diariamente a Planilha de Controle de Contratos, que sinaliza em vermelho os contratos que precisam ser renovados (45 dias antes do vencimento)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Assistente administrativo de mercado (Andresa) consulta a planilha diariamente para identificar contratos que precisam iniciar o processo de renovação. Encaminha para o supervisor (Carol) para a precificação da renovação.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">Supervisor (Eventos) faz a precificação/ proposta (PPA) e encaminha para Assistente mercado (Andresa).</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Assistente de mercado (Andresa) abre proposta de renovação no CRM</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Assistente administrativa de mercado (Andresa) encaminha a proposta para supervisor da Promoção (Carol) para visitar/contatar o cliente para renovação.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Supervisor da Promoção (Carol), em caso de visita, envolve o agente PJ da conta para visita e renovação. Em caso de e-mail, copiar o agente PJ da conta para ciência.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Em caso de renovação, Supervisor da promoção (Carol) formaliza por e-mail para PJ da conta, para ganhar a oportunidade no CRM (subir a proposta assinada), analista de mercado (Larissa), e Analista de Processos da Saúde (Lucas) para alimentar a planilha de contratos, para assistente de mercado (Andresa) e assistente da saúde para faturamento (Gabriela)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">Analista de mercado alimenta planilha para projeção</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">Execução</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Assistente da saúde (Gabriela) executa faturamento mensalmente</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Pós-vendas</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 7: PJ Educação -->
+        <div id="flow-pj-educacao" class="flow-content">
+            <div class="header">
+                <h1>Fluxo PJ Educação</h1>
+                <p>Processo de vendas para Pessoa Jurídica - Educação</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Prospecção e Proposta</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-11</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIOS</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Levantamento da proposta</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Cadastrar no CRM</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">PJ encaminha por e-mail para Supervisor da modalidade, coordenador da modalidade, analista de mercado (Larissa) e PCP (pcp.altovaie@sc.senai.br)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Sendo necessária visita técnica, PJ agenda com supervisor e empresa</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">PJ encaminha informações para Coord, Supervisor e PCP (pcp.altovaie@sc.senai.br) por e-mail</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Supervisor faz a precificação e encaminha assistente de mercado (Tainá)</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Assistente de mercado (Tainá) faz o lançamento no CRM e encaminha para o PJ</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">PJ fazer negociação, combinar o prazo, follow e ganhar no CRM (subir proposta no CRM) e combina forma de certificação (digital ou física) e informa se tem necessidade de inclusão de logomarca da prefeitura</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">PJ formaliza por e-mail de agradecimento ao cliente e um portfolio de novos produtos</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Em caso de poder público, precisamos do empenho e ordem de compra e combinados em relação a envio de NF (pessoa, data e e-mail). Sendo indústrias, nome e e-mail do contato de compras de empresa e data de vencimento de boleto, parcelamento.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">PJ formaliza por e-mail o aceite com o contrato assinado e dados combinados (Item 9) para coord e supervisor, assit adm de mercado (Vitória), PCP e analista de mercado</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Planejamento e Execução</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 12-27</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIOS/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">PCP e Supervisor fecham calendário de execução</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">Supervisor encaminha e-mail solicitando abertura de RPC para assistente de mercado (Tainá) com: nome do produto, link do produto do SGN (se for produto existente), data de início e data final (apropriação), Valor, parcelamento, local, horário/período, quantidade de alunos (mínimo e máximo) e turmas. Informações devem chegar para assistente administrativo (Tainá) com 48h antes do início das aulas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">Assistente de mercado (Tainá) abre RPC e em caso de produto customizado, criar o produto no SGN. Gera o Processo Seletivo, encaminha o número do RPC e PS, opção do certificado físico ou digital por e-mail para coord, supervisor,PCP, secretaria</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">15</div>
+                                    <div class="step-text">Secretaria atualiza turma e PCP ensala</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">SENAI - Supervisor contata cliente para alinhar dados dos alunos, via forms (colocar link). Comunicar cliente de que prazo máximo de entrada de novos estudantes é com no máximo de 25% da carga horária, considerando que não possa haver mais faltas. Para ECO, abaixo de 60h, não pode haver entrada de novos estudantes após início de 60h, não pode haver entrada de novos estudantes após início das aulas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">SESI - Supervisor contata cliente para alinhar dados dos alunos, via planilha. Comunicar cliente de que prazo máximo de entrada de novos estudantes é com no máximo de 20% da carga horária, considerando que não possa haver mais faltas. Para ECO, abaixo de 60h, não pode haver entrada de novos estudantes após início das aulas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">17</div>
+                                    <div class="step-text">Supervisor encaminha planilha com dados dos clientes para secretaria</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">18</div>
+                                    <div class="step-text">Secretaria inclui no SGN dados dos clientes</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">19</div>
+                                    <div class="step-text">Início da execução</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">20</div>
+                                    <div class="step-text">Supervisor encaminha lista de presença no primeiro dia de aula para secretaria.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">21</div>
+                                    <div class="step-text">Supervisor devolve e-mail para Analista de mercado (Larissa) e coord de mercado comunicando início da execução</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">22</div>
+                                    <div class="step-text">Analista de mercado (Larissa) confere se o empenho está no mesmo CNPJ em que foi aberto o RPC. Abre chamado para faturamento com nome, e-mail, data de vencimento do boleto, nº RPC, quantidade de parcelas, apropriação e receita. Quando for órgão público, empenho, ordem de compra, se há necessidade de relatório. Comunicar se o faturamento único ou parcelado.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">23</div>
+                                    <div class="step-text">Financeiro executa o faturamento e tramita no chamado</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">24</div>
+                                    <div class="step-text">Equipe pedagógica, supervisores e professores fazem conselho de classe em turmas com mais de 60h</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">25</div>
+                                    <div class="step-text">Professor finaliza diário e supervisor valida</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">26</div>
+                                    <div class="step-text">Secretaria certifica e conclui a turma</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">27</div>
+                                    <div class="step-text">Secretaria comunica PJ e supervisor por e-mail que a turma está certificada</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 8: SESI Transferência -->
+        <div id="flow-sesi-transferencia" class="flow-content">
+            <div class="header">
+                <h1>Fluxo Escola SESI - Transferência</h1>
+                <p>Processo de transferência de alunos para Escola SESI</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Processo Completo de Transferência</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-17</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Família entra em contato buscando vaga.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Identificação de turma e informação de valores.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">Quando a família entra em contato, existe vaga na turma e não existe lista de espera, registra como Cliente Potencial no CRM.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Não havendo a vaga, registra como cliente potencial no CRM, em lista de espera, seguindo protocolo de assunto (link). Caso a família queira, agendamos a visita. Nesse caso, não encaminhamos o e-mail com orientações. O mesmo só vai quando surge a vaga e a família é chamada.</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">CARTA:</div>
+                                    <div>EDI, Carta - EF, Carta - FF - 1º-5º Carta - EF - 6º-9º</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Havendo vaga, agendamos a visita com supervisor ou orientador (sendo criança com laudo, necessário incluir psicopedagoga). Não havendo disponibilidade destes, acionar o coordenador da educação básica (Maris)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Acontece a visita com a pessoa determinada. No mesmo dia da visita, caso a família sinalize interesse em seguir com a matrícula, time PF encaminha e-mail e WhatsApp com orientações, relação de documentos e formulário (3 - requerimento de matrícula, ficha de identificação e ficha da saúde e segurança.) Sendo Ensino Médio 1ª Série, soma-se o termo de compromisso de entrega de histórico de conclusão do ensino fundamental até Janeiro, para outras Séries o prazo de entrega determinado no histórico escolar é de 60 dias. Este e-mail deve partir do comercial. A família tem dois dias úteis para encaminhar os documentos solicitados.</div>
+                                </div>
+                                <div class="step-output">
+                                    <div class="step-output-label">REG:</div>
+                                    <div>Reg. de Matrícula e Ficha de Saúde e Segurança - EI Casa, 1ª Matrícula - Ficha de Saúde e Segurança - EF Casa, 1ª Matrícula - Ficha de Saúde e Segurança - EF Reg. de Matrícula e Ficha de Saúde e Segurança - EM.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">Família encaminha os documentos; mercado analisa e sobe as fichas de saúde e segurança para o orientador pedagógico da modalidade e a psicopedagoga avaliarem. Time PF marca o orientador pedagógico na planilha de Planejamento de Turmas com a informação de ficha disponível para análise</div>
+                                </div>
+                                <div class="alert-warning">VALIDAR COM NEGÓCIO</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">Orientador pedagógico e psicopedagogo avaliam as fichas de saúde e segurança dos novos estudantes até final de Novembro, para que a Supervisão possa organizar os processos seletivos e as contratações de auxiliares e professor. Sendo necessário, bem como adaptação de infraestrutura.</div>
+                                </div>
+                                <div class="alert-warning">VALIDAR COM NEGÓCIO</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">Caso avaliado pelo orientador a necessidade de uma conversa com o psicopedagogo, o orientador deve sinalizar ao time PF marcando-o na planilha de Planejamento de Turma para que agende uma conversa com a família. Após a reunião, o psicopedagogo dá o OK marcando o time PF na planilha de Planejamento de Turma.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Time PF cadastra no SGN e faz inscrição no processo seletivo. Caso haja inadimplência, o SGN acusa. Mercado contata família para apresentar outro responsável financeiro ou pagamento antecipado. Caso a família não possa mas queria seguir com a matrícula, mercado formaliza e-mail ao GEREX pedindo autorização para seguir com matrícula com pagamento parcelado. GEREX autorizando, mercado encaminha e-mail para analise@credito@fiesc.com.br para que liberem perfil no SGN habilitando a secretaria a confirmar a pré-matrícula. Inclui o cliente no PS, habilita o contrato, gera o boleto da primeira parcela (quando pertinente) e encaminha ao cliente pelo whatsapp.</div>
+                                </div>
+                                <div class="alert-warning">ANÁLISE DE CRÉDITO</div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Time PF anexa documentos na pré-matrícula no SGN e ganha oportunidade no CRM. Inclui a data na planilha de Planejamento de Turmas, na coluna observação e marca a secretaria, informando também que a documentação está ok para formalização do contrato.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">Time PF negocia com o cliente a data de ingresso. Inclui a data na planilha de Planejamento de Turmas, na coluna Observação e marca a secretaria para envio de credenciais para assinatura eletrônica, marcando o Time PF na planilha de Planejamento de Turmas informando que já enviou e-mail com as credenciais, lembrando também que o Time PF é responsável por acompanhar assinatura do contrato e informar prazo devido de vencimento da parcela.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">Secretaria emite contrato e comunica time PF para envio de credenciais para assinatura eletrônica, marcando o Time PF na planilha de Planejamento de Turmas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">Time do mercado contata cliente para assinatura do contrato e informa o prazo devido de vencimento da parcela.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">15</div>
+                                    <div class="step-text">Cliente assina contrato e time PF confirma a pré-matrícula, gera a primeira parcela (boleto), que é encaminhada para o cliente pelo whatsapp.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">Time PF identifica pagamento da primeira parcela no SGN. Alimenta de planejamento de turmas, na coluna Observação, informando taxa paga e marca secretaria nos comentários.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">17</div>
+                                    <div class="step-text">Secretaria confirma matrícula no SGN e responde e-mail para os envolvidos, reforçando a data de ingresso do estudante para Orientador agendar com a Supervisão e o espaço para acesso ao espaço do estudante (pasta uni automatica, sistema dispara automático) e secretaria reforça via whatsapp.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 9: SESI Campanha -->
+        <div id="flow-sesi-campanha" class="flow-content">
+            <div class="header">
+                <h1>Fluxo Escola SESI - Campanha</h1>
+                <p>Processo de matrícula via campanha de matrículas</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Processo Completo de Campanha</div><div style="font-size: 0.9rem; opacity: 0.9;">Passos 1-23</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Família entra em contato buscando vaga.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Identificação de turma e informação de valores.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">Quando a família entra em contato, existe vaga na turma e não existe lista de espera, registra como Cliente Potencial no CRM.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Não havendo a vaga, registra como cliente potencial no CRM, em lista de espera, seguindo protocolo de assunto. Caso a família queira, agendamos a visita. Nesse caso, não encaminhamos o e-mail com orientações. O mesmo só vai quando surge a vaga e a família é chamada</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Havendo vaga, agendamos a visita com supervisor ou orientador (sendo criança com laudo, necessário incluir psicopedagoga). Não havendo disponibilidade destes, acionar o coordenador da educação básica (Maris)</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Acontece a visita com a pessoa determinada.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">7</div>
+                                    <div class="step-text">No mesmo dia da visita, caso a família sinalize interesse em seguir com a matrícula, time PF encaminha e-mail e WhatsApp com orientações, relação de documentos e formulário (3 - requerimento de matrícula, ficha de identificação e ficha da saúde e segurança.) Sendo Ensino Médio 1ª Série, soma-se o termo de compromisso de entrega de histórico de conclusão do ensino fundamental até Janeiro, para outras Séries/o prazo de entrega determinado no histórico escolar é de 60 dias. Este e-mail deve partir do comercial. A família tem dois dias úteis para encaminhar os documentos solicitados.</div>
+                                </div>
+                                <div class="alert-warning">VALIDAR COM NEGÓCIO</div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">8</div>
+                                    <div class="step-text">Família encaminha os documentos; mercado analisa e sobe as fichas de saúde e segurança para o orientador pedagógico da modalidade e a psicopedagoga avaliarem. Time PF marca o orientador pedagógico na planilha de Planejamento de Turmas com a informação de ficha disponível para análise</div>
+                                </div>
+                                <div class="alert-warning">VALIDAR COM NEGÓCIO</div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: NEGÓCIO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">9</div>
+                                    <div class="step-text">Orientador pedagógico e psicopedagogo avaliam as fichas de saúde e segurança dos novos estudantes até final de Novembro, para que a Supervisão possa organizar os processos seletivos e as contratações de auxiliares e professor. Sendo necessário, bem como adaptação de infraestrutura.</div>
+                                </div>
+                                <div class="alert-warning">VALIDAR COM NEGÓCIO</div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">10</div>
+                                    <div class="step-text">Caso avaliado pelo orientador a necessidade de uma conversa com o psicopedagogo, o orientador deve sinalizar ao time PF marcando-o na planilha de Planejamento de Turma para que agende uma conversa com a família. Após a reunião, o psicopedagogo dá o OK marcando o time PF na planilha de Planejamento de Turma.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">11</div>
+                                    <div class="step-text">Time PF cadastra no SGN e faz inscrição no processo seletivo. Caso haja inadimplência, o SGN acusa. Mercado contata família para apresentar outro responsável financeiro ou pagamento antecipado. Caso a família não possa mas queria seguir com a matrícula, mercado formaliza e-mail ao GEREX pedindo autorização para seguir com matrícula com pagamento parcelado. GEREX autorizando, mercado encaminha e-mail para analisedecredito@fiesc.com.br para que liberem perfil no SGN habilitando a secretaria a confirmar a pré-matrícula.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">12</div>
+                                    <div class="step-text">Time PF anexa documentos na pré-matrícula no SGN e ganha oportunidade no CRM. Inclui a planilha de Planejamento de Turmas, na coluna observação e marca a secretaria, informando também que a documentação está ok para formalização do contrato.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">13</div>
+                                    <div class="step-text">Secretaria emite contrato e comunica time PF para envio de credenciais para assinatura eletrônica, marcando o Time PF na planilha de Planejamento de Turmas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">14</div>
+                                    <div class="step-text">Time do mercado contata cliente para assinatura do contrato e informa prazo devido de vencimento da parcela.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">15</div>
+                                    <div class="step-text">Cliente assina contrato e time PF confirma a pré-matrícula, gera a primeira parcela (boleto), que é encaminhada para o cliente pelo whatsapp.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">16</div>
+                                    <div class="step-text">Time PF identifica pagamento da primeira parcela no SGN. Alimenta de planejamento de turmas, na coluna Observação, informando taxa paga e marca secretaria nos comentários.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="handoff"><div class="handoff-badge">⚡ HANDOFF ⚡</div></div>
+                    <div class="lane">
+                        <div class="lane-header">RESPONSÁVEL: MERCADO/GESTÃO</div>
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">17</div>
+                                    <div class="step-text">Time PF lança na pré-matrícula do SGN a solicitação de desconto, quando houver.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">18</div>
+                                    <div class="step-text">Em Dezembro, a secretaria cria e/ou atualiza os grupos de whats das turmas, remove os evadidos e inclui os alunos novos.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">19</div>
+                                    <div class="step-text">Em Novembro, supervisão encaminha lista de materiais do próximo ano nas agendas digitais dos atuais alunos. Em dezembro, assim que criado o grupo da nova turma, é encaminhada a lista novamente pelo grupo de whats.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">20</div>
+                                    <div class="step-text">Em Janeiro, a secretaria confirma as matrículas.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">21</div>
+                                    <div class="step-text">Em Janeiro, é encaminhado orientações de acesso ao espaço do estudante por e-mail (sistema dispara automático) e secretaria reforça via whatsapp.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">22</div>
+                                    <div class="step-text">Em Janeiro, supervisão faz cadastro na plataforma Bilíngue de alunos novos.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">23</div>
+                                    <div class="step-text">Em Janeiro, supervisão organiza venda de livros.</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- FLUXO 10: PF SENAI -->
+        <div id="flow-pf-senai" class="flow-content">
+            <div class="header">
+                <h1>Fluxo PF SENAI</h1>
+                <p>Em desenvolvimento - conteúdo completo em breve</p>
+            </div>
+        </div>
+
+        <!-- FLUXO 11: Pós-Vendas -->
+        <div id="flow-pos-vendas" class="flow-content">
+            <div class="header">
+                <h1>Pós-Vendas</h1>
+                <p>Orientações gerais de atendimento pós-venda</p>
+            </div>
+
+            <div class="phase">
+                <div class="phase-header phase-default" onclick="togglePhase(this)">
+                    <div><div style="font-size: 1.2rem;">Atendimento Pós-Venda</div><div style="font-size: 0.9rem; opacity: 0.9;">Orientações Gerais</div></div>
+                    <span class="chevron">▶</span>
+                </div>
+                <div class="phase-body">
+                    <div class="lane">
+                        <div class="lane-steps">
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">1</div>
+                                    <div class="step-text">Em caso de dúvidas sobre faturamento da Saúde, orientar o cliente a acessar o Portal do Cliente.</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">2</div>
+                                    <div class="step-text">Segunda via de NF e boletos</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">3</div>
+                                    <div class="step-text">Em caso de necessidade de relatórios, identificar o produto/serviço e direcionar ao supervisor da modalidade</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">4</div>
+                                    <div class="step-text">Em casos de dúvidas sobre Educação, orientar contato com Jean do Financeiro</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">5</div>
+                                    <div class="step-text">Em caso de dúvidas sobre outras casas, buscar o máximo de informações com o cliente e orientar contato com Jean do Financeiro</div>
+                                </div>
+                            </div>
+                            <div class="arrow-down">↓</div>
+                            <div class="step" onclick="toggleStep(this)">
+                                <div class="step-header">
+                                    <div class="step-number">6</div>
+                                    <div class="step-text">Em casos de questionamentos sobre desempenho de colaboradores nos produtos de educação, não podemos passar informações devido LGPD</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        function showFlow(flowId) {
+            document.querySelectorAll('.flow-content').forEach(f => f.classList.remove('active'));
+            document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+            const flow = document.getElementById('flow-' + flowId);
+            if (flow) flow.classList.add('active');
+            event.target.closest('.sidebar-item').classList.add('active');
+            document.querySelector('.main-content').scrollTop = 0;
+        }
+        function togglePhase(el) {
+            el.closest('.phase').classList.toggle('expanded');
+        }
+        function toggleStep(el) {
+            el.classList.toggle('expanded');
+        }
+    </script>
+</body>
+</html>
